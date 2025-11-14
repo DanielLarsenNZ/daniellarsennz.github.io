@@ -1,373 +1,734 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <style>
-    body {
-      background: #e6f2ff;
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-    }
-
-    #header {
-      padding: 20px;
-      background: #4c8bf5;
-      color: white;
-      text-align: center;
-    }
-
-    #main {
-      display: flex;
-      padding: 20px;
-    }
-
-    #left {
-      width: 50%;
-      text-align: center;
-    }
-
-    #right {
-      width: 50%;
-      padding: 10px;
-    }
-
-    #otter-click {
-      width: 250px;
-      cursor: pointer;
-      transition: transform 0.1s ease;
-      user-select: none;
-    }
-
-    #otter-click:active {
-      transform: scale(0.88);
-    }
-
-    .upgrade-row, .boost-row {
-      background: white;
-      padding: 10px;
-      border-radius: 10px;
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 10px;
-      border: 2px solid #d1e3ff;
-    }
-
-    button {
-      padding: 7px 14px;
-      background: #4c8bf5;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-
-    button:hover {
-      background: #376ed3;
-    }
-
-    #toast-container {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-    }
-
-    .toast {
-      background: rgba(0,0,0,0.8);
-      color: white;
-      padding: 10px 14px;
-      border-radius: 5px;
-      margin-top: 10px;
-      opacity: 0;
-      transform: translateY(20px);
-      transition: 0.25s;
-    }
-
-    .toast.show {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  </style>
-</head>
-
-<body>
-  <div id="header">
-    <h1>🦦 Otter Reborn Clicker</h1>
-    <div>Clams: <span id="currency">0</span></div>
-    <div>Per Click: <span id="click-power">1</span></div>
-    <div>CPS: <span id="cps">0</span></div>
-    <div>Clicks: <span id="clicks">0</span></div>
-    <div>Prestige: <span id="prestige">0</span></div>
-
-    <button id="reset-game">Reset Game (New Player)</button>
-  </div>
-
-  <div id="main">
-    <div id="left">
-      <img id="otter-click"
-        src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAIAAABccqhmAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAAsTAAALEwEAmpwYAAAIJUlEQVR4nO3dMW4bORQG4BdS9Nn8/J3OpgrICwhfQ3OCE2cS7bVjA1pTbSt+6EgsHMxYgAAABAgQIECBAgAABAgT8FfqX6n8LeFjsG8mW7bmzvY8UuP2P5cv15yKuD7Fy8H+cH+8in9kAvwPx+3F+8gX/ZOtwf7yE/2QC/A/H7cX7yBf9k63B/vIT/ZAL8D8ftxfvIF/2TrcH+8hP9kAvwPx+3F+8gX/ZOtwf7yE/2QO7fHdV7xfv5Fvzp4R/18H8V+8xXPJY4d9ktbwcd9ks3wccdkznccJkzmMM1k20Me8g3fYl8F/T9QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAICfDzY17o8M0puAAAAAElFTkSuQmCC">
+<div id="game-root" class="game-dark">
+  <header class="header">
+    <div class="title">
+      <svg width="36" height="36" viewBox="0 0 24 24" class="logo" aria-hidden>
+        <g fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 12c0-5 4-9 9-9s9 4 9 9-4 9-9 9S3 17 3 12z"/>
+          <path d="M8 12c1.5-2.5 4.5-3 6-1.5" />
+        </g>
+      </svg>
+      <h1>Otterverse Clicker — Reborn Edition</h1>
     </div>
 
-    <div id="right">
-      <h2>Click Upgrades</h2>
-      <div id="click-upgrades"></div>
-
-      <h2>Passive Upgrades</h2>
-      <div id="upgrades"></div>
-
-      <h2>Boosts</h2>
-      <div id="boosts"></div>
+    <div class="topbar-stats">
+      <div class="stat">Clams: <span id="stat-currency">0</span></div>
+      <div class="stat">/sec: <span id="stat-cps">0</span></div>
+      <div class="stat">Clicks: <span id="stat-clicks">0</span></div>
+      <div class="stat">Rebirth pts: <span id="stat-rebirth">0</span></div>
     </div>
-  </div>
+  </header>
 
-  <div id="toast-container"></div>
+  <main class="main">
+    <section class="left">
+      <div id="click-area" class="click-area" title="Click the otter!">
+        <svg id="otter-svg" viewBox="0 0 480 320" preserveAspectRatio="xMidYMid meet">
+          <!-- Simple otter illustration -->
+          <g transform="translate(40,20)">
+            <ellipse cx="200" cy="210" rx="160" ry="60" fill="#caa07c"/>
+            <ellipse cx="200" cy="150" rx="120" ry="90" fill="#f3d9c3"/>
+            <circle cx="160" cy="125" r="12" fill="#161616"/>
+            <circle cx="240" cy="125" r="12" fill="#161616"/>
+            <ellipse cx="200" cy="160" rx="22" ry="14" fill="#161616"/>
+          </g>
+        </svg>
+        <div id="click-fx" class="click-fx"></div>
+      </div>
 
-<script>
+      <div class="controls">
+        <div class="btns">
+          <button id="save-btn">Save</button>
+          <button id="load-btn">Load</button>
+          <button id="reset-btn">Reset</button>
+        </div>
+
+        <div class="prestige">
+          <button id="rebirth-btn" class="big">Rebirth (earn Rebirth Points)</button>
+          <div class="small">Next Rebirth: <span id="rebirth-next">200k</span> clams</div>
+        </div>
+      </div>
+
+      <div class="info-row">
+        <div class="panel small">
+          <h4>Worlds</h4>
+          <div id="worlds-list" class="worlds"></div>
+        </div>
+
+        <div class="panel small">
+          <h4>Auto</h4>
+          <div>
+            <label><input id="toggle-autobuy" type="checkbox"> Auto-buy best upgrade</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="log panel">
+        <h4>Log</h4>
+        <div id="log-lines" class="log-lines"></div>
+      </div>
+    </section>
+
+    <aside class="right">
+      <div class="panel">
+        <h3>Upgrades</h3>
+        <div id="upgrades" class="list"></div>
+      </div>
+
+      <div class="panel">
+        <h3>Rebirth Shop</h3>
+        <div id="rebirth-shop" class="list small-list"></div>
+      </div>
+
+      <div class="panel small">
+        <h4>Stats</h4>
+        <div>Click Power: <span id="stat-clickpower">1</span></div>
+        <div>Global Mult: x<span id="stat-mult">1.00</span></div>
+        <div>Offline: <span id="stat-offline">0s</span></div>
+      </div>
+
+      <div class="panel small">
+        <h4>Achievements</h4>
+        <div id="ach-list" class="small-list"></div>
+      </div>
+    </aside>
+  </main>
+
+  <div id="toast-root" class="toasts" aria-live="polite"></div>
+  <footer class="footer">Paste into JSFiddle panels • Autosave silent • Have fun!</footer>
+</div>
+<button id="reset-game" style="margin:10px;padding:10px 20px;font-size:16px;">
+  Reset Game (New Player)
+</button>
+/* Otterverse Clicker — Reborn Edition */
+:root{
+  --bg:#071322; --card:#0b2a34; --accent:#ffd166; --muted:#9fb7c1; --glass:rgba(255,255,255,0.03);
+  --success:#32d296; --danger:#ff6b6b;
+}
+*{box-sizing:border-box;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial}
+body{margin:0;background:linear-gradient(180deg,var(--bg),#031019);color:#e9f6f8;padding:18px}
+#game-root{max-width:1200px;margin:0 auto}
+.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.title{display:flex;align-items:center;gap:12px}
+.title h1{margin:0;font-size:20px;color:var(--accent)}
+.logo{color:var(--accent)}
+.topbar-stats{display:flex;gap:10px;align-items:center}
+.stat{background:var(--glass);padding:8px 10px;border-radius:8px;color:var(--muted);min-width:110px;text-align:center}
+
+.main{display:flex;gap:16px;align-items:flex-start}
+.left{flex:1.2;display:flex;flex-direction:column;gap:12px}
+.right{width:420px;display:flex;flex-direction:column;gap:12px}
+
+.click-area{background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.006));border-radius:16px;padding:20px;display:flex;justify-content:center;align-items:center;position:relative;min-height:300px;cursor:pointer;box-shadow:0 8px 30px rgba(0,0,0,0.6)}
+.click-area svg{width:70%;height:auto;pointer-events:none;user-select:none}
+.click-fx{position:absolute;border-radius:50%;pointer-events:none;width:0;height:0;background:radial-gradient(circle, rgba(255,209,102,0.18) 0%, rgba(255,209,102,0.03) 45%, transparent 70%)}
+
+.controls{display:flex;gap:12px;align-items:center}
+.btns button, .prestige button{background:var(--card);border:none;padding:8px 10px;border-radius:10px;color:var(--accent);cursor:pointer}
+.prestige .big{background:linear-gradient(90deg,#ffd166,#ffb86b);color:#072427;padding:10px 14px;font-weight:600}
+
+.panel{background:linear-gradient(180deg, rgba(255,255,255,0.012), rgba(255,255,255,0.006));border-radius:12px;padding:12px;box-shadow:0 6px 20px rgba(2,6,23,0.6)}
+.panel.small{display:flex;gap:10px;align-items:center}
+.list{display:grid;gap:8px;max-height:420px;overflow:auto;padding-right:6px}
+.small-list{display:flex;flex-direction:column;gap:8px}
+
+.upgrade, .reb, .shop-item {
+  display:flex;justify-content:space-between;align-items:center;padding:8px;border-radius:8px;background:rgba(255,255,255,0.02)
+}
+.upgrade .meta{display:flex;gap:10px;align-items:center;flex:1}
+.icon {
+  width:44px;height:44px;border-radius:8px;display:grid;place-items:center;background:rgba(255,255,255,0.03);flex-shrink:0
+}
+.meta h4{margin:0;font-size:14px}
+.meta p{margin:4px 0 0 0;color:var(--muted);font-size:13px}
+.upgrade button, .shop-item button{padding:6px 10px;border-radius:8px;border:none;background:var(--accent);color:#072427;cursor:pointer}
+
+.badge{background:rgba(255,255,255,0.03);padding:4px 8px;border-radius:999px;font-size:12px;color:var(--muted)}
+
+.worlds{display:flex;gap:8px;flex-wrap:wrap}
+.world-card{padding:8px;border-radius:10px;min-width:96px;cursor:pointer;background:rgba(255,255,255,0.015);text-align:center}
+.world-card.active{outline:2px solid var(--accent);box-shadow:0 6px 18px rgba(255,209,102,0.06)}
+.world-card small{display:block;color:var(--muted)}
+
+.log{min-height:64px}
+.log-lines{max-height:160px;overflow:auto;font-size:13px;color:var(--muted)}
+.footer{text-align:center;color:var(--muted);margin-top:12px}
+
+/* Toasts */
+.toasts{position:fixed;right:18px;bottom:18px;display:flex;flex-direction:column;gap:8px;z-index:999}
+.toast{background:linear-gradient(180deg,#06262a,#0b3a3e);padding:10px 12px;border-radius:10px;color:#eaf7f6;box-shadow:0 8px 30px rgba(0,0,0,0.6);opacity:0;transform:translateY(8px);transition:all .22s}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.success{border-left:4px solid var(--success)}
+.toast.warn{border-left:4px solid var(--danger)}
+
+.tooltip {
+  position: absolute; pointer-events: none; background:#072427; color:#dff7f0; padding:8px 10px; border-radius:6px; font-size:13px; transform:translate(-50%,-120%); white-space:nowrap; box-shadow:0 8px 30px rgba(0,0,0,0.6); display:none;
+}
+
+
+/* Otterverse Clicker — Reborn Edition
+   Paste as the JS panel in JSFiddle. No external libs.
+*/
+
 (() => {
-  const SAVE_KEY = "OTTER_REBORN_SAVEFILE";
-
+  // ---------- State ----------
+  const SAVE_KEY = 'otterverse_reborn_v1';
   const state = {
     currency: 0,
     clicks: 0,
     clickPowerBase: 1,
-    prestige: 0,
-    upgrades: {},
-    clickUpgrades: {},
-    boosts: {},
+    upgrades: {},          // id => level
+    boughtOnce: {},       // one-time purchases
+    rebirthPoints: 0,
+    rebirthBought: {},     // shop items bought with rebirth points
+    world: 'beach',        // current world id
+    autobuy: false,
+    lastTick: Date.now(),
+    lastActive: Date.now(),
   };
 
-  const $ = s => document.querySelector(s);
-
-  const toastBox = $("#toast-container");
-  const toast = msg => {
-    const t = document.createElement("div");
-    t.className = "toast";
-    t.textContent = msg;
-    toastBox.appendChild(t);
-    requestAnimationFrame(() => t.classList.add("show"));
-    setTimeout(() => {
-      t.classList.remove("show");
-      setTimeout(() => t.remove(), 300);
-    }, 2000);
-  };
-
-  const fmt = n =>
-    n >= 1e9 ? (n/1e9).toFixed(2)+"b" :
-    n >= 1e6 ? (n/1e6).toFixed(2)+"m" :
-    n >= 1e3 ? (n/1e3).toFixed(1)+"k" : n;
-
-  // ——————————————————————————————
-  // CLICK UPGRADES
-  // ——————————————————————————————
-  const CLICK_UPGRADES = [
-    { id:"tap1", name:"Tiny Paw Pads", click:1, price:20 },
-    { id:"tap2", name:"Otter Gloves", click:4, price:90 },
-    { id:"tap3", name:"Golden Paw", click:15, price:350 },
-    { id:"tap4", name:"Mythic Claw", click:70, price:1800 },
+  // ---------- Definitions ----------
+  // worlds: id, name, multiplier, unlockCost (0 = start)
+  const WORLDS = [
+    { id: 'beach', name: 'Sunny Beach', mul: 1.0, cost: 0, color: '#ffd166', desc: 'Start here.' },
+    { id: 'mangrove', name: 'Mangrove Marsh', mul: 1.25, cost: 25000, color: '#9ad3bc', desc: 'Tropical boosts.' },
+    { id: 'aurora', name: 'Aurora Isles', mul: 1.6, cost: 200000, color: '#9ec1ff', desc: 'Magical multipliers.' },
+    { id: 'void', name: 'Void Expanse', mul: 2.5, cost: 1200000, color: '#c29cff', desc: 'Riskier, powerful.' }
   ];
 
-  // ——————————————————————————————
-  // PASSIVE UPGRADES
-  // ——————————————————————————————
-  const PASSIVE_UPGRADES = [
-    { id:"shell1", name:"Seashell Stand", cps:1, price:15 },
-    { id:"shell2", name:"Driftwood Cart", cps:7, price:90 },
-    { id:"cafe", name:"Otter Café", cps:40, price:800 },
+  // upgrades: id, name, desc, baseCost, cps, click, mult, scale, iconSVG (string), oneTime
+  const UPGRADE_DEFS = [
+    { id:'s1', name:'Seashell Stall', desc:'+1 cps', baseCost:10, cps:1, scale:1.15, icon: seashellIcon() },
+    { id:'s2', name:'Drift Cart', desc:'+8 cps', baseCost:80, cps:8, scale:1.17, icon: cartIcon() },
+    { id:'spoon', name:'Silver Spoon', desc:'+1 click', baseCost:25, click:1, scale:1.16, icon: spoonIcon() },
+    { id:'barista', name:'Otter Barista', desc:'+40 cps', baseCost:600, cps:40, scale:1.2, icon: coffeeIcon() },
+    { id:'market', name:'Seaside Market', desc:'+5% global mult per lvl', baseCost:3000, mult:1.05, scale:1.22, icon: marketIcon() },
+    { id:'auto', name:'Auto Feeder', desc:'Auto-click: +0.5 cps per lvl', baseCost:120, cps:0.5, scale:1.18, icon: autoIcon() },
+    { id:'pearl', name:'Ancient Pearl', desc:'+100 click (one-time)', baseCost:250000, click:100, oneTime:true, icon: pearlIcon() },
+    { id:'factory', name:'Berry Factory', desc:'+1200 cps', baseCost:90000, cps:1200, scale:1.26, icon: factoryIcon() }
   ];
 
-  // ——————————————————————————————
-  // BOOSTS
-  // ——————————————————————————————
-  const BOOSTS = [
-    { id:"rush", name:"Splash Rush", desc:"2x CPS for 45s", price:500, duration:45000 },
-    { id:"focus", name:"Focused Tap", desc:"5x click power for 20s", price:800, duration:20000 },
+  // rebirth shop (buy with rebirth points)
+  const REBIRTH_SHOP = [
+    { id:'r_mul', name:'Permanent +5% global mult', cost:3, apply: s => s.rebirthMul = (s.rebirthMul||1)+0.05, desc:'Stackable' },
+    { id:'r_click', name:'+5 base click', cost:5, apply: s => s.clickPowerBase = (s.clickPowerBase||1)+5, desc:'Permanent click boost' },
+    { id:'r_autobuy', name:'Autobuy Slot', cost:8, apply: s => s.autoSlots = (s.autoSlots||0)+1, desc:'Improves autobuy' }
   ];
 
-  // ——————————————————————————————
-  // BUILD UIs
-  // ——————————————————————————————
-  function buildClickUpgrades() {
-    const box = $("#click-upgrades");
-    box.innerHTML = "";
-    CLICK_UPGRADES.forEach(u => {
-      state.clickUpgrades[u.id] ||= 0;
+  // achievements simple
+  const ACHIEVEMENTS = [
+    { id:'first', name:'First Click', check: s => s.clicks >= 1, reward: ()=>50 },
+    { id:'clams1k', name:'1k Clams', check: s => s.currency >= 1000, reward: ()=>200 },
+    { id:'clicks1k', name:'1000 Clicks', check: s => s.clicks >= 1000, reward: ()=>1000 },
+    { id:'worldHop', name:'World Traveler', check: s => s.world !== 'beach', reward: ()=>300 }
+  ];
 
-      const row = document.createElement("div");
-      row.className = "upgrade-row";
+  // ---------- DOM ----------
+  const $ = sel => document.querySelector(sel);
+  const $currency = $('#stat-currency');
+  const $cps = $('#stat-cps');
+  const $clicks = $('#stat-clicks');
+  const $rebirth = $('#stat-rebirth');
+  const $clickPower = $('#stat-clickpower');
+  const $mult = $('#stat-mult');
+  const $offline = $('#stat-offline');
 
-      row.innerHTML = `
-        <div><strong>${u.name}</strong><br>+${u.click} per click</div>
-        <button id="buy-${u.id}">Buy (${fmt(u.price)})</button>
-      `;
+  const $clickArea = $('#click-area');
+  const $clickFx = $('#click-fx');
 
-      box.appendChild(row);
+  const $upgradesList = $('#upgrades');
+  const $worldsList = $('#worlds-list');
+  const $rebirthBtn = $('#rebirth-btn');
+  const $rebirthNext = $('#rebirth-next');
+  const $rebirthShop = $('#rebirth-shop');
+  const $achList = $('#ach-list');
+  const $logLines = $('#log-lines');
+  const $toastRoot = $('#toast-root');
 
-      $("#buy-" + u.id).onclick = () => {
-        if (state.currency < u.price) return toast("Not enough clams!");
-        state.currency -= u.price;
-        state.clickPowerBase += u.click;
-        u.price = Math.floor(u.price * 1.45);
-        toast("Purchased " + u.name);
-        render();
-        buildClickUpgrades();
-      };
-    });
+  const $saveBtn = $('#save-btn');
+  const $loadBtn = $('#load-btn');
+  const $resetBtn = $('#reset-btn');
+  const $toggleAutobuy = $('#toggle-autobuy');
+
+  // ---------- Utilities ----------
+  function fmt(n){
+    if (n>=1e9) return (n/1e9).toFixed(2)+'b';
+    if (n>=1e6) return (n/1e6).toFixed(2)+'m';
+    if (n>=1e3) return (n/1e3).toFixed(1)+'k';
+    return Math.floor(n);
+  }
+  function now(){ return Date.now(); }
+  function sec(){ return Date.now()/1000; }
+
+  function toast(msg, opts={}) {
+    const el = document.createElement('div');
+    el.className = 'toast' + (opts.type ? ` ${opts.type}` : '');
+    el.textContent = msg;
+    $toastRoot.appendChild(el);
+    requestAnimationFrame(()=> el.classList.add('show'));
+    setTimeout(()=> { el.classList.remove('show'); setTimeout(()=> el.remove(), 300); }, opts.time||2500);
+  }
+  function log(s){
+    const d = document.createElement('div');
+    d.textContent = `${(new Date()).toLocaleTimeString()} — ${s}`;
+    $logLines.prepend(d);
+    if ($logLines.children.length > 80) $logLines.removeChild($logLines.lastChild);
   }
 
-  function buildPassiveUpgrades() {
-    const box = $("#upgrades");
-    box.innerHTML = "";
-
-    PASSIVE_UPGRADES.forEach(u => {
-      state.upgrades[u.id] ||= 0;
-
-      const row = document.createElement("div");
-      row.className = "upgrade-row";
-
-      row.innerHTML = `
-        <div><strong>${u.name}</strong><br>+${u.cps} cps</div>
-        <button id="buy-${u.id}">Buy (${fmt(u.price)})</button>
-      `;
-
-      box.appendChild(row);
-
-      $("#buy-" + u.id).onclick = () => {
-        if (state.currency < u.price) return toast("Not enough clams!");
-        state.currency -= u.price;
-        state.upgrades[u.id]++;
-        u.price = Math.floor(u.price * 1.35);
-        toast("Purchased " + u.name);
-        render();
-        buildPassiveUpgrades();
-      };
-    });
+  // ---------- Cost & value calc ----------
+  function costFor(def, lvl) {
+    const scale = def.scale || 1.15;
+    return Math.floor(def.baseCost * Math.pow(scale, lvl) * (1 + (state.rebirthMul||1-1) )); // rebirthMul not applied here except to show effect if you want
   }
 
-  function buildBoosts() {
-    const box = $("#boosts");
-    box.innerHTML = "";
-
-    BOOSTS.forEach(b => {
-      state.boosts[b.id] ||= { active:false, until:0 };
-
-      const row = document.createElement("div");
-      row.className = "boost-row";
-
-      row.innerHTML = `
-        <div><strong>${b.name}</strong><br>${b.desc}</div>
-        <button id="boost-${b.id}">${fmt(b.price)}</button>
-      `;
-
-      box.appendChild(row);
-
-      $("#boost-" + b.id).onclick = () => {
-        if (state.currency < b.price) return toast("Not enough clams!");
-        if (state.boosts[b.id].active) return toast("Already active!");
-
-        state.currency -= b.price;
-        state.boosts[b.id].active = true;
-        state.boosts[b.id].until = Date.now() + b.duration;
-        toast(b.name + " Activated!");
-        render();
-      };
-    });
+  function computeBaseCPS() {
+    let total = 0;
+    for (const d of UPGRADE_DEFS) {
+      const lvl = state.upgrades[d.id] || 0;
+      if (d.cps) total += lvl * d.cps;
+    }
+    // base world multiplier
+    const world = WORLDS.find(w=>w.id===state.world) || WORLDS[0];
+    total *= world.mul;
+    // rebirth points bonus
+    const rebMul = 1 + (state.rebirthPoints * 0.03);
+    total *= rebMul;
+    // any rebirth shop permanent mult
+    if (state.rebirthMul) total *= state.rebirthMul;
+    return total;
   }
 
-  // ——————————————————————————————
-  // CALCULATIONS
-  // ——————————————————————————————
-  const computeClickPower = () => state.clickPowerBase * (1 + state.prestige * 0.05);
+  function computeClickValue() {
+    let v = state.clickPowerBase || 1;
+    for (const d of UPGRADE_DEFS) {
+      const lvl = state.upgrades[d.id] || 0;
+      if (d.click) v += lvl * d.click;
+    }
+    // world & rebirth mults
+    const world = WORLDS.find(w=>w.id===state.world) || WORLDS[0];
+    v *= world.mul;
+    v *= (1 + state.rebirthPoints * 0.02);
+    if (state.rebirthMul) v *= state.rebirthMul;
+    return v;
+  }
 
-  const computeCPS = () => {
-    let cps = 0;
-    PASSIVE_UPGRADES.forEach(u => {
-      cps += u.cps * state.upgrades[u.id];
-    });
-    if (state.boosts.rush?.active) cps *= 2;
-    return cps * (1 + state.prestige * 0.03);
-  };
+  // ---------- Gameplay mechanics ----------
+  // initialize defaults
+  for (const d of UPGRADE_DEFS) state.upgrades[d.id] = state.upgrades[d.id] || 0;
+  for (const w of WORLDS) if(!state.world) state.world = WORLDS[0].id;
+  state.rebirthPoints = state.rebirthPoints || 0;
 
-  // ——————————————————————————————
-  // CLICK HANDLER
-  // ——————————————————————————————
-  $("#otter-click").addEventListener("click", () => {
-    state.currency += computeClickPower();
+  // click
+  $clickArea.addEventListener('click', (ev) => {
+    const gained = computeClickValue();
+    state.currency += gained;
     state.clicks++;
+    showClickFx(ev.clientX, ev.clientY);
+    toast(`+${fmt(Math.round(gained))}`, { time: 800 });
+    checkAchievements();
     render();
   });
 
-  // ——————————————————————————————
-  // PASSIVE CPS
-  // ——————————————————————————————
-  setInterval(() => {
-    state.currency += computeCPS();
-    render();
-
-    BOOSTS.forEach(b => {
-      if (state.boosts[b.id].active && Date.now() > state.boosts[b.id].until) {
-        state.boosts[b.id].active = false;
-        toast(b.name + " ended");
-      }
-    });
-  }, 1000);
-
-  // ——————————————————————————————
-  // RENDERING
-  // ——————————————————————————————
-  function render() {
-    $("#currency").textContent = fmt(state.currency);
-    $("#click-power").textContent = fmt(computeClickPower());
-    $("#cps").textContent = fmt(computeCPS());
-    $("#clicks").textContent = fmt(state.clicks);
-    $("#prestige").textContent = state.prestige;
+  function showClickFx(clientX, clientY){
+    const rect = $clickArea.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+    $clickFx.style.left = x + 'px';
+    $clickFx.style.top = y + 'px';
+    $clickFx.style.width = '6px';
+    $clickFx.style.height = '6px';
+    $clickFx.animate([{width:'6px',height:'6px',opacity:0.9},{width:'380px',height:'380px',opacity:0}], { duration:420, easing:'ease-out' });
+    setTimeout(()=> { $clickFx.style.width='0'; $clickFx.style.height='0'; }, 420);
   }
 
-  // ——————————————————————————————
-  // SAVE SYSTEM
-  // ——————————————————————————————
-  const save = () => localStorage.setItem(SAVE_KEY, JSON.stringify(state));
-  const load = () => {
-    const data = localStorage.getItem(SAVE_KEY);
-    if (data) Object.assign(state, JSON.parse(data));
-  };
-  setInterval(save, 8000);
+  // tick loop (passive income)
+  let lastFrame = now();
+  function tickLoop(time) {
+    const nowt = now();
+    const dt = (nowt - lastFrame) / 1000;
+    lastFrame = nowt;
 
-  // ——————————————————————————————
-  // RESET BUTTON (Fully working)
-  // ——————————————————————————————
-  $("#reset-game").onclick = () => {
-    if (!confirm("Reset ALL progress?")) return;
+    // CPS income per second (applies dt)
+    const cps = computeBaseCPS();
+    state.currency += cps * dt;
 
-    localStorage.removeItem(SAVE_KEY);
+    // autobuying: try buy best affordable upgrade occasionally
+    if (state.autobuy) {
+      tryAutoBuy();
+    }
 
+    // render at ~60fps but inexpensive
+    render();
+    requestAnimationFrame(tickLoop);
+  }
+  requestAnimationFrame(tickLoop);
+
+  // ---------- Upgrades UI (created once) ----------
+  function buildUpgradesUI(){
+    $upgradesList.innerHTML = '';
+    for (const def of UPGRADE_DEFS) {
+      const row = document.createElement('div');
+      row.className = 'upgrade';
+      row.id = `upgrade-row-${def.id}`;
+
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+
+      const icon = document.createElement('div');
+      icon.className = 'icon';
+      icon.innerHTML = def.icon || '';
+
+      const text = document.createElement('div');
+      text.innerHTML = `<h4>${def.name}</h4><p>${def.desc}</p>`;
+
+      meta.appendChild(icon);
+      meta.appendChild(text);
+
+      const right = document.createElement('div');
+      right.className = 'right';
+
+      const badge = document.createElement('div');
+      badge.className = 'badge';
+      badge.id = `lvl-${def.id}`;
+      badge.textContent = 'Lv 0';
+
+      const btn = document.createElement('button');
+      btn.id = `btn-${def.id}`;
+      btn.textContent = 'Buy';
+      btn.onclick = () => buyUpgrade(def.id);
+      btn.onmouseenter = (e) => showUpgradePreview(def, e);
+      btn.onmouseleave = hidePreview;
+
+      right.appendChild(badge);
+      right.appendChild(btn);
+
+      row.appendChild(meta);
+      row.appendChild(right);
+
+      $upgradesList.appendChild(row);
+    }
+  }
+
+  function buyUpgrade(id, qty=1) {
+    const def = UPGRADE_DEFS.find(d=>d.id===id);
+    if (!def) return;
+    const lvl = state.upgrades[id] || 0;
+    const price = costFor(def, lvl);
+    if (state.currency < price) { toast('Not enough clams'); return false; }
+    // pay and increment
+    state.currency -= price;
+    state.upgrades[id] = lvl + 1;
+    // apply one-time effects
+    if (def.oneTime && !state.boughtOnce[id]) {
+      state.boughtOnce[id] = true;
+      state.clickPowerBase += def.click || 0;
+    }
+    toast(`Bought ${def.name} (Lv ${state.upgrades[id]})`, { type:'success' });
+    log(`Bought ${def.name} for ${fmt(price)} clams`);
+    render();
+    return true;
+  }
+
+  // autobuy logic: buy cheapest upgrade that increases cps or click, or the most efficient
+  function tryAutoBuy() {
+    // simple heuristic: buy the upgrade with best (increase per cost)
+    let best = null;
+    for (const def of UPGRADE_DEFS) {
+      const lvl = state.upgrades[def.id] || 0;
+      const price = costFor(def, lvl);
+      if (price > state.currency) continue;
+      // compute value: use cps + click-converted (click*5 cps equivalent)
+      const cpsGain = (def.cps || 0);
+      const clickGain = (def.click || 0) * 3; // click is worth ~3 cps for decision
+      const value = (cpsGain + clickGain) / price;
+      if (!best || value > best.value) best = { def, value, price };
+    }
+    if (best) buyUpgrade(best.def.id);
+  }
+
+  // ---------- Worlds UI ----------
+  function buildWorldsUI(){
+    $worldsList.innerHTML = '';
+    for (const w of WORLDS) {
+      const card = document.createElement('div');
+      card.className = 'world-card' + (state.world===w.id ? ' active' : '');
+      card.innerHTML = `<strong>${w.name}</strong><small>${w.desc}</small><small>Unlock: ${fmt(w.cost)}</small>`;
+      card.onclick = () => {
+        if (state.world === w.id) return;
+        if (state.currency >= w.cost) {
+          state.currency -= w.cost;
+          state.world = w.id;
+          toast(`Travelled to ${w.name}`, { type:'success' });
+          log(`World: ${w.name}`);
+          render();
+        } else {
+          toast(`Need ${fmt(w.cost)} clams to unlock ${w.name}`);
+        }
+      };
+      $worldsList.appendChild(card);
+    }
+  }
+
+  // ---------- Rebirth (prestige) ----------
+  function rebirthGain() {
+    // formula: floor(currency / 200000) + small factor for worlds
+    return Math.floor(state.currency / 200000);
+  }
+
+  $rebirthBtn.onclick = () => {
+    const gain = rebirthGain();
+    if (gain <= 0) { toast('Need 200,000 clams to rebirth'); return; }
+    if (!confirm(`Rebirth and gain ${gain} Rebirth Points? This will reset your progress.`)) return;
+    // grant rebirth points
+    state.rebirthPoints += gain;
+    // reset relevant state while preserving rebirthPoints and purchased rebirthShop items
+    const keep = {
+      rebirthPoints: state.rebirthPoints,
+      rebirthBought: state.rebirthBought || {},
+      rebirthMul: state.rebirthMul || 1,
+      clickPowerBase: 1 + (state.clickPowerBase - 1) * 0.2 // small carryover to make it less brutal
+    };
+    // reset
+    for (const k of Object.keys(state)) delete state[k];
     Object.assign(state, {
       currency: 0,
       clicks: 0,
-      clickPowerBase: 1,
-      prestige: 0,
+      clickPowerBase: keep.clickPowerBase || 1,
       upgrades: {},
-      clickUpgrades: {},
-      boosts: {},
+      boughtOnce: {},
+      rebirthPoints: keep.rebirthPoints,
+      rebirthBought: keep.rebirthBought,
+      rebirthMul: keep.rebirthMul,
+      world: 'beach',
+      autobuy: false,
+      lastTick: now(),
+      lastActive: now()
     });
-
-    buildClickUpgrades();
-    buildPassiveUpgrades();
-    buildBoosts();
+    for (const d of UPGRADE_DEFS) state.upgrades[d.id] = 0;
+    toast(`Rebirthed +${gain} pts!`, { type:'success' });
+    log(`Rebirthed: +${gain} RP`);
     render();
-
-    alert("Game reset! Fresh start ready.");
+    save(true);
   };
 
-  // ——————————————————————————————
-  // START
-  // ——————————————————————————————
-  load();
-  buildClickUpgrades();
-  buildPassiveUpgrades();
-  buildBoosts();
-  render();
+  // rebirth shop UI
+  function buildRebirthShop(){
+    $rebirthShop.innerHTML = '';
+    for (const item of REBIRTH_SHOP) {
+      const el = document.createElement('div');
+      el.className = 'shop-item';
+      const meta = document.createElement('div');
+      meta.innerHTML = `<strong>${item.name}</strong><div style="color:var(--muted)">${item.desc}</div>`;
+      const btn = document.createElement('button');
+      btn.textContent = `Buy (${item.cost})`;
+      btn.onclick = () => {
+        if (state.rebirthPoints >= item.cost) {
+          state.rebirthPoints -= item.cost;
+          item.apply(state);
+          state.rebirthBought[item.id] = (state.rebirthBought[item.id] || 0) + 1;
+          toast(`Bought ${item.name}`, { type:'success' });
+          render();
+          save(true);
+        } else {
+          toast('Not enough Rebirth Points');
+        }
+      };
+      el.appendChild(meta);
+      el.appendChild(btn);
+      $rebirthShop.appendChild(el);
+    }
+  }
+
+  // ---------- Achievements ----------
+  const unlockedAchievements = {};
+  function buildAchievements(){
+    $achList.innerHTML = '';
+    for (const a of ACHIEVEMENTS) {
+      const el = document.createElement('div');
+      el.className = 'ach';
+      el.textContent = `${a.name} ${unlockedAchievements[a.id] ? '✓' : ''}`;
+      $achList.appendChild(el);
+    }
+  }
+  function checkAchievements(){
+    for (const a of ACHIEVEMENTS) {
+      if (!unlockedAchievements[a.id] && a.check(state)) {
+        unlockedAchievements[a.id] = true;
+        const reward = (a.reward && a.reward()) || 0;
+        state.currency += reward;
+        toast(`Achievement unlocked: ${a.name} +${fmt(reward)}`, { type:'success' });
+        log(`Achievement: ${a.name}`);
+      }
+    }
+  }
+
+  // ---------- Rendering (fast updates, DOM not rebuilt) ----------
+  function render(){
+    $currency.textContent = fmt(Math.floor(state.currency));
+    $cps.textContent = fmt(Math.round(computeBaseCPS()*10)/10);
+    $clicks.textContent = fmt(state.clicks);
+    $rebirth.textContent = fmt(state.rebirthPoints);
+    $clickPower.textContent = fmt(Math.round(computeClickValue()));
+    $mult.textContent = ( (WORLDS.find(w=>w.id===state.world).mul) * (1 + state.rebirthPoints*0.03) ).toFixed(2);
+
+    // update upgrades info
+    for (const def of UPGRADE_DEFS) {
+      const lvl = state.upgrades[def.id] || 0;
+      const badge = document.getElementById(`lvl-${def.id}`);
+      if (badge) badge.textContent = `Lv ${lvl}`;
+      const btn = document.getElementById(`btn-${def.id}`);
+      if (btn) btn.textContent = `Buy (${fmt(costFor(def, lvl))})`;
+    }
+    // update worlds active styling
+    [...$worldsList.children].forEach((c,i) => {
+      c.classList.toggle('active', WORLDS[i].id === state.world);
+    });
+
+    // achievements
+    buildAchievements();
+
+    // offline stat
+    const secOff = Math.floor((now() - (state.lastActive || now()))/1000);
+    $offline.textContent = `${secOff}s`;
+  }
+
+  // ---------- Save / Load / Auto-save (silent) ----------
+  function save(showToast=false){
+    try {
+      const toSave = {
+        currency: state.currency,
+        clicks: state.clicks,
+        clickPowerBase: state.clickPowerBase,
+        upgrades: state.upgrades,
+        boughtOnce: state.boughtOnce,
+        rebirthPoints: state.rebirthPoints,
+        rebirthBought: state.rebirthBought,
+        rebirthMul: state.rebirthMul,
+        world: state.world,
+        autobuy: state.autobuy,
+        lastActive: Date.now()
+      };
+      localStorage.setItem(SAVE_KEY, JSON.stringify(toSave));
+      if (showToast) toast('Game saved', { type:'success' });
+    } catch(e){ console.error('save failed', e); }
+  }
+  function load(){
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) { toast('No save found'); return; }
+      const s = JSON.parse(raw);
+      state.currency = s.currency || 0;
+      state.clicks = s.clicks || 0;
+      state.clickPowerBase = s.clickPowerBase || 1;
+      state.upgrades = s.upgrades || state.upgrades;
+      state.boughtOnce = s.boughtOnce || {};
+      state.rebirthPoints = s.rebirthPoints || 0;
+      state.rebirthBought = s.rebirthBought || {};
+      state.rebirthMul = s.rebirthMul || state.rebirthMul;
+      state.world = s.world || state.world;
+      state.autobuy = s.autobuy || false;
+      // offline
+      const last = s.lastActive || Date.now();
+      const diffSec = Math.floor((Date.now() - last)/1000);
+      if (diffSec > 5) {
+        const offlineGain = Math.floor(diffSec * computeBaseCPS());
+        state.currency += offlineGain;
+        toast(`Offline +${fmt(offlineGain)} clams (${diffSec}s)`, { type:'success' });
+        log(`Offline gain: ${fmt(offlineGain)} (${diffSec}s)`);
+      }
+      render();
+      toast('Loaded', { type:'success' });
+    } catch(e){ console.error(e); toast('Load failed', { type:'warn' }); }
+  }
+  $saveBtn.onclick = ()=> save(true);
+  $loadBtn.onclick = load;
+  $resetBtn.onclick = ()=> { if(confirm('Reset game and clear save?')) { localStorage.removeItem(SAVE_KEY); location.reload(); } };
+  $toggleAutobuy.onchange = (e)=> { state.autobuy = e.target.checked; toast(`Autobuy ${state.autobuy ? 'on' : 'off'}`); };
+
+  // autosave silent
+  setInterval(()=> save(false), 12000);
+
+  // ---------- Helpers: preview tooltip ----------
+  let tooltipEl = null;
+  function showUpgradePreview(def, ev){
+    hidePreview();
+    tooltipEl = document.createElement('div');
+    tooltipEl.className = 'tooltip';
+    tooltipEl.textContent = `${def.name} — Next cost: ${fmt(costFor(def, state.upgrades[def.id]||0))}`;
+    document.body.appendChild(tooltipEl);
+    const rect = ev.target.getBoundingClientRect();
+    tooltipEl.style.left = (rect.left + rect.width/2) + 'px';
+    tooltipEl.style.top = (rect.top) + 'px';
+    tooltipEl.style.display = 'block';
+  }
+  function hidePreview(){ if (tooltipEl) { tooltipEl.remove(); tooltipEl = null; } }
+
+  // ---------- Initialization ----------
+  function init() {
+    // set defaults if missing
+    for (const d of UPGRADE_DEFS) state.upgrades[d.id] = state.upgrades[d.id] || 0;
+
+    buildUpgradesUI();
+    buildWorldsUI();
+    buildRebirthShop();
+    buildAchievements();
+    // load if available
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (raw) load();
+    else {
+      toast('Welcome to Otterverse — click to earn clams!', { type:'success' });
+    }
+    render();
+    state.lastActive = Date.now();
+  }
+  init();
+
+  // ---------- Utility: cost compute fix (used by UI) ----------
+  function costFor(def, lvl){ return Math.floor(def.baseCost * Math.pow(def.scale || 1.15, lvl) ); }
+
+  // ---------- Start animation / tick handled earlier ----------
+  // ensure periodic save on pagehide
+  window.addEventListener('pagehide', ()=> save(false));
+
+  // ---------- Icon SVG helpers ----------
+  // simple SVG strings for icons (kept as functions to keep def area readable)
+  function seashellIcon(){ return `<svg viewBox="0 0 24 24" width="20" height="20"><path d="M2 12c3-7 12-8 20-4" stroke="#ffd166" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>`; }
+  function cartIcon(){ return `<svg viewBox="0 0 24 24" width="20" height="20"><path d="M3 3h2l2 9h9l2-6H7" stroke="#9ad3bc" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>`; }
+  function spoonIcon(){ return `<svg viewBox="0 0 24 24" width="20" height="20"><path d="M7 7c2 2 6 6 10 10" stroke="#f6b042" stroke-width="1.6" fill="none"/></svg>`; }
+  function coffeeIcon(){ return `<svg viewBox="0 0 24 24" width="20" height="20"><path d="M4 7h14v7a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4z" stroke="#ffd166" stroke-width="1.4" fill="none"/></svg>`; }
+  function marketIcon(){ return `<svg viewBox="0 0 24 24" width="20" height="20"><rect x="3" y="7" width="18" height="10" rx="2" stroke="#9ec1ff" stroke-width="1.4" fill="none"/></svg>`; }
+  function autoIcon(){ return `<svg viewBox="0 0 24 24" width="20" height="20"><path d="M3 12h4l3-8 3 16 3-8 4 4" stroke="#f6b042" stroke-width="1.4" fill="none"/></svg>`; }
+  function pearlIcon(){ return `<svg viewBox="0 0 24 24" width="20" height="20"><circle cx="12" cy="12" r="6" stroke="#c29cff" stroke-width="1.4" fill="none"/></svg>`; }
+  function factoryIcon(){ return `<svg viewBox="0 0 24 24" width="20" height="20"><path d="M2 20h20V10l-4-3-4 3-4-3-4 3v10z" stroke="#9ad3bc" stroke-width="1.2" fill="none"/></svg>`; }
+
+  // ---------- Final small helpers ----------
+  function costFor(def, lvl) { return Math.floor(def.baseCost * Math.pow(def.scale || 1.15, lvl)); }
+
+  // expose for debugging
+  window.Otterverse = { state, save, load, buyUpgrade, UPGRADE_DEFS, WORLDS };
 
 })();
-</script>
+// FULL RESET BUTTON FIX — FOR OTTER REBORN VERSION
+document.getElementById("reset-game").addEventListener("click", () => {
+  if (!confirm("Are you sure you want to reset ALL progress?")) return;
 
-</body>
-</html>
+  // Clear save data
+  localStorage.removeItem(SAVE_KEY);
+
+  // Reset all game state values
+  Object.assign(state, {
+    currency: 0,
+    clicks: 0,
+    clickPowerBase: 1,
+    upgrades: {},
+    boosts: {},
+    achievements: {},
+    prestige: 0,
+    lastActive: Date.now(),
+  });
+
+  // Rebuild UI elements so nothing is broken
+  buildUpgradesUI();
+  buildBoostsUI();
+  render();
+
+  alert("Game has been fully reset! Your sister can start fresh.");
+});
