@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {
+      background: #e6f2ff;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    #header {
+      padding: 20px;
+      background: #4c8bf5;
+      color: white;
+      text-align: center;
+    }
+
+    #main {
+      display: flex;
+      padding: 20px;
+    }
+
+    #left {
+      width: 50%;
+      text-align: center;
+    }
+
+    #right {
+      width: 50%;
+      padding: 10px;
+    }
+
+    #otter-click {
+      width: 250px;
+      cursor: pointer;
+      transition: transform 0.1s ease;
+      user-select: none;
+    }
+
+    #otter-click:active {
+      transform: scale(0.88);
+    }
+
+    .upgrade-row, .boost-row {
+      background: white;
+      padding: 10px;
+      border-radius: 10px;
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      border: 2px solid #d1e3ff;
+    }
+
+    button {
+      padding: 7px 14px;
+      background: #4c8bf5;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #376ed3;
+    }
+
+    #toast-container {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+    }
+
+    .toast {
+      background: rgba(0,0,0,0.8);
+      color: white;
+      padding: 10px 14px;
+      border-radius: 5px;
+      margin-top: 10px;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: 0.25s;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
+</head>
+
+<body>
+  <div id="header">
+    <h1>🦦 Otter Reborn Clicker</h1>
+    <div>Clams: <span id="currency">0</span></div>
+    <div>Per Click: <span id="click-power">1</span></div>
+    <div>CPS: <span id="cps">0</span></div>
+    <div>Clicks: <span id="clicks">0</span></div>
+    <div>Prestige: <span id="prestige">0</span></div>
+
+    <button id="reset-game">Reset Game (New Player)</button>
+  </div>
+
+  <div id="main">
+    <div id="left">
+      <img id="otter-click"
+        src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAIAAABccqhmAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAAsTAAALEwEAmpwYAAAIJUlEQVR4nO3dMW4bORQG4BdS9Nn8/J3OpgrICwhfQ3OCE2cS7bVjA1pTbSt+6EgsHMxYgAAABAgQIECBAgAABAgT8FfqX6n8LeFjsG8mW7bmzvY8UuP2P5cv15yKuD7Fy8H+cH+8in9kAvwPx+3F+8gX/ZOtwf7yE/2QC/A/H7cX7yBf9k63B/vIT/ZAL8D8ftxfvIF/2TrcH+8hP9kAvwPx+3F+8gX/ZOtwf7yE/2QO7fHdV7xfv5Fvzp4R/18H8V+8xXPJY4d9ktbwcd9ks3wccdkznccJkzmMM1k20Me8g3fYl8F/T9QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAICfDzY17o8M0puAAAAAElFTkSuQmCC">
+    </div>
+
+    <div id="right">
+      <h2>Click Upgrades</h2>
+      <div id="click-upgrades"></div>
+
+      <h2>Passive Upgrades</h2>
+      <div id="upgrades"></div>
+
+      <h2>Boosts</h2>
+      <div id="boosts"></div>
+    </div>
+  </div>
+
+  <div id="toast-container"></div>
+
+<script>
+(() => {
+  const SAVE_KEY = "OTTER_REBORN_SAVEFILE";
+
+  const state = {
+    currency: 0,
+    clicks: 0,
+    clickPowerBase: 1,
+    prestige: 0,
+    upgrades: {},
+    clickUpgrades: {},
+    boosts: {},
+  };
+
+  const $ = s => document.querySelector(s);
+
+  const toastBox = $("#toast-container");
+  const toast = msg => {
+    const t = document.createElement("div");
+    t.className = "toast";
+    t.textContent = msg;
+    toastBox.appendChild(t);
+    requestAnimationFrame(() => t.classList.add("show"));
+    setTimeout(() => {
+      t.classList.remove("show");
+      setTimeout(() => t.remove(), 300);
+    }, 2000);
+  };
+
+  const fmt = n =>
+    n >= 1e9 ? (n/1e9).toFixed(2)+"b" :
+    n >= 1e6 ? (n/1e6).toFixed(2)+"m" :
+    n >= 1e3 ? (n/1e3).toFixed(1)+"k" : n;
+
+  // ——————————————————————————————
+  // CLICK UPGRADES
+  // ——————————————————————————————
+  const CLICK_UPGRADES = [
+    { id:"tap1", name:"Tiny Paw Pads", click:1, price:20 },
+    { id:"tap2", name:"Otter Gloves", click:4, price:90 },
+    { id:"tap3", name:"Golden Paw", click:15, price:350 },
+    { id:"tap4", name:"Mythic Claw", click:70, price:1800 },
+  ];
+
+  // ——————————————————————————————
+  // PASSIVE UPGRADES
+  // ——————————————————————————————
+  const PASSIVE_UPGRADES = [
+    { id:"shell1", name:"Seashell Stand", cps:1, price:15 },
+    { id:"shell2", name:"Driftwood Cart", cps:7, price:90 },
+    { id:"cafe", name:"Otter Café", cps:40, price:800 },
+  ];
+
+  // ——————————————————————————————
+  // BOOSTS
+  // ——————————————————————————————
+  const BOOSTS = [
+    { id:"rush", name:"Splash Rush", desc:"2x CPS for 45s", price:500, duration:45000 },
+    { id:"focus", name:"Focused Tap", desc:"5x click power for 20s", price:800, duration:20000 },
+  ];
+
+  // ——————————————————————————————
+  // BUILD UIs
+  // ——————————————————————————————
+  function buildClickUpgrades() {
+    const box = $("#click-upgrades");
+    box.innerHTML = "";
+    CLICK_UPGRADES.forEach(u => {
+      state.clickUpgrades[u.id] ||= 0;
+
+      const row = document.createElement("div");
+      row.className = "upgrade-row";
+
+      row.innerHTML = `
+        <div><strong>${u.name}</strong><br>+${u.click} per click</div>
+        <button id="buy-${u.id}">Buy (${fmt(u.price)})</button>
+      `;
+
+      box.appendChild(row);
+
+      $("#buy-" + u.id).onclick = () => {
+        if (state.currency < u.price) return toast("Not enough clams!");
+        state.currency -= u.price;
+        state.clickPowerBase += u.click;
+        u.price = Math.floor(u.price * 1.45);
+        toast("Purchased " + u.name);
+        render();
+        buildClickUpgrades();
+      };
+    });
+  }
+
+  function buildPassiveUpgrades() {
+    const box = $("#upgrades");
+    box.innerHTML = "";
+
+    PASSIVE_UPGRADES.forEach(u => {
+      state.upgrades[u.id] ||= 0;
+
+      const row = document.createElement("div");
+      row.className = "upgrade-row";
+
+      row.innerHTML = `
+        <div><strong>${u.name}</strong><br>+${u.cps} cps</div>
+        <button id="buy-${u.id}">Buy (${fmt(u.price)})</button>
+      `;
+
+      box.appendChild(row);
+
+      $("#buy-" + u.id).onclick = () => {
+        if (state.currency < u.price) return toast("Not enough clams!");
+        state.currency -= u.price;
+        state.upgrades[u.id]++;
+        u.price = Math.floor(u.price * 1.35);
+        toast("Purchased " + u.name);
+        render();
+        buildPassiveUpgrades();
+      };
+    });
+  }
+
+  function buildBoosts() {
+    const box = $("#boosts");
+    box.innerHTML = "";
+
+    BOOSTS.forEach(b => {
+      state.boosts[b.id] ||= { active:false, until:0 };
+
+      const row = document.createElement("div");
+      row.className = "boost-row";
+
+      row.innerHTML = `
+        <div><strong>${b.name}</strong><br>${b.desc}</div>
+        <button id="boost-${b.id}">${fmt(b.price)}</button>
+      `;
+
+      box.appendChild(row);
+
+      $("#boost-" + b.id).onclick = () => {
+        if (state.currency < b.price) return toast("Not enough clams!");
+        if (state.boosts[b.id].active) return toast("Already active!");
+
+        state.currency -= b.price;
+        state.boosts[b.id].active = true;
+        state.boosts[b.id].until = Date.now() + b.duration;
+        toast(b.name + " Activated!");
+        render();
+      };
+    });
+  }
+
+  // ——————————————————————————————
+  // CALCULATIONS
+  // ——————————————————————————————
+  const computeClickPower = () => state.clickPowerBase * (1 + state.prestige * 0.05);
+
+  const computeCPS = () => {
+    let cps = 0;
+    PASSIVE_UPGRADES.forEach(u => {
+      cps += u.cps * state.upgrades[u.id];
+    });
+    if (state.boosts.rush?.active) cps *= 2;
+    return cps * (1 + state.prestige * 0.03);
+  };
+
+  // ——————————————————————————————
+  // CLICK HANDLER
+  // ——————————————————————————————
+  $("#otter-click").addEventListener("click", () => {
+    state.currency += computeClickPower();
+    state.clicks++;
+    render();
+  });
+
+  // ——————————————————————————————
+  // PASSIVE CPS
+  // ——————————————————————————————
+  setInterval(() => {
+    state.currency += computeCPS();
+    render();
+
+    BOOSTS.forEach(b => {
+      if (state.boosts[b.id].active && Date.now() > state.boosts[b.id].until) {
+        state.boosts[b.id].active = false;
+        toast(b.name + " ended");
+      }
+    });
+  }, 1000);
+
+  // ——————————————————————————————
+  // RENDERING
+  // ——————————————————————————————
+  function render() {
+    $("#currency").textContent = fmt(state.currency);
+    $("#click-power").textContent = fmt(computeClickPower());
+    $("#cps").textContent = fmt(computeCPS());
+    $("#clicks").textContent = fmt(state.clicks);
+    $("#prestige").textContent = state.prestige;
+  }
+
+  // ——————————————————————————————
+  // SAVE SYSTEM
+  // ——————————————————————————————
+  const save = () => localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+  const load = () => {
+    const data = localStorage.getItem(SAVE_KEY);
+    if (data) Object.assign(state, JSON.parse(data));
+  };
+  setInterval(save, 8000);
+
+  // ——————————————————————————————
+  // RESET BUTTON (Fully working)
+  // ——————————————————————————————
+  $("#reset-game").onclick = () => {
+    if (!confirm("Reset ALL progress?")) return;
+
+    localStorage.removeItem(SAVE_KEY);
+
+    Object.assign(state, {
+      currency: 0,
+      clicks: 0,
+      clickPowerBase: 1,
+      prestige: 0,
+      upgrades: {},
+      clickUpgrades: {},
+      boosts: {},
+    });
+
+    buildClickUpgrades();
+    buildPassiveUpgrades();
+    buildBoosts();
+    render();
+
+    alert("Game reset! Fresh start ready.");
+  };
+
+  // ——————————————————————————————
+  // START
+  // ——————————————————————————————
+  load();
+  buildClickUpgrades();
+  buildPassiveUp
