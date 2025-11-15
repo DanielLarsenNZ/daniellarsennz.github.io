@@ -24,9 +24,9 @@ body{margin:0;background:linear-gradient(180deg,var(--bg),#031019);color:#e9f6f8
 .left{flex:1.2;display:flex;flex-direction:column;gap:12px}
 .right{width:420px;display:flex;flex-direction:column;gap:12px}
 
-.click-area{background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.006));border-radius:16px;padding:20px;display:flex;justify-content:center;align-items:center;position:relative;min-height:300px;cursor:pointer;box-shadow:0 8px 30px rgba(0,0,0,0.6)}
+.click-area{background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.006));border-radius:16px;padding:20px;display:flex;justify-content:center;align-items:center;position:relative;overflow:hidden}
 .click-area svg{width:70%;height:auto;pointer-events:none;user-select:none}
-.click-fx{position:absolute;border-radius:50%;pointer-events:none;width:0;height:0;background:radial-gradient(circle, rgba(255,209,102,0.18) 0%, rgba(255,209,102,0.03) 45%, transparent 70%)}
+.click-fx{position:absolute;border-radius:50%;pointer-events:none;width:0;height:0;background:radial-gradient(circle, rgba(255,209,102,0.18) 0%, rgba(255,209,102,0.03) 45%, transparent 70%);transform:translate(-50%,-50%)}
 
 .controls{display:flex;gap:12px;align-items:center}
 .btns button, .prestige button{background:var(--card);border:none;padding:8px 10px;border-radius:10px;color:var(--accent);cursor:pointer}
@@ -48,6 +48,8 @@ body{margin:0;background:linear-gradient(180deg,var(--bg),#031019);color:#e9f6f8
 .meta p{margin:4px 0 0 0;color:var(--muted);font-size:13px}
 .upgrade button, .shop-item button{padding:6px 10px;border-radius:8px;border:none;background:var(--accent);color:#072427;cursor:pointer}
 
+.right{display:flex;gap:8px;align-items:center}
+
 .badge{background:rgba(255,255,255,0.03);padding:4px 8px;border-radius:999px;font-size:12px;color:var(--muted)}
 
 .worlds{display:flex;gap:8px;flex-wrap:wrap}
@@ -60,13 +62,23 @@ body{margin:0;background:linear-gradient(180deg,var(--bg),#031019);color:#e9f6f8
 .footer{text-align:center;color:var(--muted);margin-top:12px}
 
 .toasts{position:fixed;right:18px;bottom:18px;display:flex;flex-direction:column;gap:8px;z-index:999}
-.toast{background:linear-gradient(180deg,#06262a,#0b3a3e);padding:10px 12px;border-radius:10px;color:#eaf7f6;box-shadow:0 8px 30px rgba(0,0,0,0.6);opacity:0;transform:translateY(8px);transition:all .22s}
+.toast{background:linear-gradient(180deg,#06262a,#0b3a3e);padding:10px 12px;border-radius:10px;color:#eaf7f6;box-shadow:0 8px 30px rgba(0,0,0,0.6);opacity:0;transform:translateY(8px);transition:all .22s ease}
 .toast.show{opacity:1;transform:translateY(0)}
 .toast.success{border-left:4px solid var(--success)}
 .toast.warn{border-left:4px solid var(--danger)}
 
 .tooltip {
-  position: absolute; pointer-events: none; background:#072427; color:#dff7f0; padding:8px 10px; border-radius:6px; font-size:13px; transform:translate(-50%,-120%); white-space:nowrap; box-shadow:0 8px 30px rgba(0,0,0,0.6); display:none;
+  position: absolute;
+  pointer-events: none;
+  background:#072427;
+  color:#dff7f0;
+  padding:8px 10px;
+  border-radius:6px;
+  font-size:13px;
+  transform:translate(-50%,-120%);
+  white-space:nowrap;
+  box-shadow:0 8px 20px rgba(0,0,0,0.6);
+  z-index:9999;
 }
   </style>
 </head>
@@ -325,7 +337,7 @@ body{margin:0;background:linear-gradient(180deg,var(--bg),#031019);color:#e9f6f8
     const y = clientY - rect.top;
     $clickFx.style.left = x + 'px';
     $clickFx.style.top = y + 'px';
-    $clickFx.animate([{width:'6px',height:'6px',opacity:0.9},{width:'380px',height:'380px',opacity:0}], { duration:420, easing:'ease-out' });
+    $clickFx.animate([{width:'6px',height:'6px',opacity:0.9, transform: 'translate(-50%,-50%)'},{width:'380px',height:'380px',opacity:0, transform: 'translate(-50%,-50%)'}], { duration:420, easing:'ease-out' });
   }
 
   // ---------- Passive Income Loop ----------
@@ -384,7 +396,12 @@ body{margin:0;background:linear-gradient(180deg,var(--bg),#031019);color:#e9f6f8
 
   function buyUpgrade(id){
     const def = UPGRADE_DEFS.find(d=>d.id===id);
+    if (!def) return;
     const lvl = state.upgrades[id] || 0;
+
+    // Prevent buying one-time upgrades more than once
+    if (def.oneTime && state.boughtOnce[id]) { toast('Already purchased'); return; }
+
     const price = costFor(def, lvl);
     if (state.currency < price) { toast('Not enough clams'); return; }
     state.currency -= price;
@@ -393,11 +410,14 @@ body{margin:0;background:linear-gradient(180deg,var(--bg),#031019);color:#e9f6f8
     toast(`Bought ${def.name}`);
     log(`Bought ${def.name} for ${fmt(price)}`);
     render();
+    save(false);
   }
 
   function tryAutoBuy() {
     let best = null;
     for (const def of UPGRADE_DEFS) {
+      // skip one-time already bought
+      if (def.oneTime && state.boughtOnce[def.id]) continue;
       const lvl = state.upgrades[def.id] || 0;
       const price = costFor(def, lvl);
       if (price > state.currency) continue;
@@ -450,6 +470,7 @@ body{margin:0;background:linear-gradient(180deg,var(--bg),#031019);color:#e9f6f8
       clickPowerBase: 1 + (state.clickPowerBase - 1) * 0.2
     };
 
+    // Reset state while preserving some rebirth-based persistence
     for (const k of Object.keys(state)) delete state[k];
     Object.assign(state, {
       currency: 0,
@@ -581,6 +602,12 @@ body{margin:0;background:linear-gradient(180deg,var(--bg),#031019);color:#e9f6f8
       const s = JSON.parse(raw);
 
       Object.assign(state, s);
+      // ensure upgrades object exists and has keys for defs
+      state.upgrades = state.upgrades || {};
+      for (const d of UPGRADE_DEFS) if (typeof state.upgrades[d.id] === 'undefined') state.upgrades[d.id] = 0;
+      state.boughtOnce = state.boughtOnce || {};
+      state.rebirthBought = state.rebirthBought || {};
+
       const diff = Math.floor((Date.now() - (s.lastActive || Date.now()))/1000);
 
       if (diff > 5) {
@@ -629,6 +656,12 @@ body{margin:0;background:linear-gradient(180deg,var(--bg),#031019);color:#e9f6f8
     buildWorldsUI();
     buildRebirthShop();
     buildAchievements();
+
+    // initialize upgrades to default keys if missing
+    if (!state.upgrades || Object.keys(state.upgrades).length === 0) {
+      state.upgrades = {};
+      for (const d of UPGRADE_DEFS) state.upgrades[d.id] = 0;
+    }
 
     if (localStorage.getItem(SAVE_KEY)) load();
     else toast('Welcome to Otterverse — click to earn clams!', { type:'success' });
